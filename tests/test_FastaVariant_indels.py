@@ -22,10 +22,14 @@ def ensure_tiny_vcf_tbi():
     vcf_gz = vcf_txt + ".gz"
 
     # (Re)create compressed and indexed VCF to ensure it's fresh
-    if os.path.exists(vcf_gz) and os.path.exists(vcf_gz + ".tbi"):
-        return vcf_gz
-
+    if os.path.exists(vcf_gz):
+        os.remove(vcf_gz)
+    
     pysam.tabix_compress(vcf_txt, vcf_gz, force=True)
+
+    if os.path.exists(vcf_gz + ".tbi"):
+        os.remove(vcf_gz + ".tbi")
+
     pysam.tabix_index(vcf_gz, preset="vcf", force=True)
 
     assert os.path.exists(vcf_gz)
@@ -100,3 +104,35 @@ def test_chr3_deletion_at_chrom_end(ensure_tiny_vcf_tbi):
     s = fasta['chr3'][12:20]
     assert s == "ACGTACG"  # one base shorter than reference
     assert len(s) == 7
+
+
+def test_default_sample_is_first_with_warning(ensure_tiny_vcf_tbi):
+    """When multiple samples exist and none specified, first sample is used with a warning."""
+    try:
+        with pytest.warns(RuntimeWarning):
+            fv_default = _make_fasta_variant(ensure_tiny_vcf_tbi)
+        fv_sample1 = _make_fasta_variant(ensure_tiny_vcf_tbi, sample="sample1")
+
+        # Sanity: default should pick the first sample (sample1)
+        s_def = fv_default['chr1'][0:12]
+        s_s1 = fv_sample1['chr1'][0:12]
+        assert s_def == s_s1
+    except (ImportError, IOError):
+        pytest.skip("pysam or PyVCF not installed or VCF indexing unavailable.")
+
+def test_combined_indels_window_sample2(ensure_tiny_vcf_tbi):
+    """Window 1..48 (0-based [0:48]) includes all variants of sample 2 on chr1, chr2 and chr3"""
+    try:
+        fasta = _make_fasta_variant(ensure_tiny_vcf_tbi, sample="sample2")
+        s1 = fasta['chr1'][0:48]
+        print(s1)
+        assert s1 == 'AAAACCCCGGTTGGTTTTAAAACCCCGGGGTTTTAAAACCCCGGGGTT'
+
+        s2 = fasta['chr2'][0:48]
+        assert s2 == "ACGTACGTANACGTACGTACGTACGTACGTACGTACGTACGT"
+
+        s3 = fasta["chr3"][0:20]
+        assert s3 == "ACGTACGTACGTACGTACGT"
+    
+    except (ImportError, IOError):
+        pytest.skip("pysam or PyVCF not installed or VCF indexing unavailable.")
