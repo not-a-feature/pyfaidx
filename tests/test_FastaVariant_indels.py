@@ -57,8 +57,8 @@ def _make_fasta_variant(vcf_gz, **kwargs):
         ),
         (
             "sample2",
-            # chr1 complete 48bp
-            "AAAACCCCGGTTGGTTTTAAAACCCCGGGGTTTTAAAACCCCGGGGTTTT",
+            # chr1 first 48bp (the complete consensus sequence has two extra Ts at the end)
+            "AAAACCCCGGTTGGTTTTAAAACCCCGGGGTTTTAAAACCCCGGGGTT",
             # chr2 complete 48bp
             "ACGTACGTANACGTACGTACGTACGTACGTACGTACGTACGT",
             # chr3 complete 20bp
